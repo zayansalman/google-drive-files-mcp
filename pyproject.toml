@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "google-drive-files-mcp"
+version = "0.1.0"
+description = "A minimal MCP server and CLI for moving and organizing Google Drive files (move, create folders)."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Zayan Khan" }]
+keywords = ["mcp", "model-context-protocol", "google-drive", "files", "move", "claude", "anthropic"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "mcp>=1.0.0",
+    "google-api-python-client>=2.100.0",
+    "google-auth-oauthlib>=1.0.0",
+    "google-auth-httplib2>=0.2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "ruff>=0.1"]
+
+[project.urls]
+Homepage = "https://github.com/zayansalman/google-drive-files-mcp"
+Repository = "https://github.com/zayansalman/google-drive-files-mcp"
+Issues = "https://github.com/zayansalman/google-drive-files-mcp/issues"
+
+[project.scripts]
+google-drive-files-mcp = "google_drive_files_mcp.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/google_drive_files_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP", "RUF"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

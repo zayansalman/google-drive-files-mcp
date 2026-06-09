@@ -1,0 +1,50 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.zayansalman/google-drive-files-mcp",
+  "description": "Minimal MCP server for moving and organizing Google Drive files (move, create folders).",
+  "repository": {
+    "url": "https://github.com/zayansalman/google-drive-files-mcp",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "google-drive-files-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "serve",
+          "description": "Subcommand that runs the stdio MCP server."
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "GDRIVE_FILES_MCP_CREDENTIALS",
+          "description": "Path to the Google OAuth client secret JSON. Default: $XDG_CONFIG_HOME/google-drive-files-mcp/credentials.json.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "filepath"
+        },
+        {
+          "name": "GDRIVE_FILES_MCP_TOKEN",
+          "description": "Path to the cached Google OAuth refresh token. Default: $XDG_CONFIG_HOME/google-drive-files-mcp/token.json.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "filepath"
+        },
+        {
+          "name": "GDRIVE_FILES_MCP_SCOPES",
+          "description": "Comma-separated Google OAuth scopes. Default: https://www.googleapis.com/auth/drive (full, required to move files).",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}
