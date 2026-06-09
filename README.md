@@ -86,6 +86,55 @@ google-drive-files-mcp move <file-url-or-id> root      # move back to My Drive r
 - **Folder-name destinations must be unambiguous.** If two folders share a name, `drive_move` refuses and lists the candidates so you can pass an explicit ID.
 - **The before/after parents are returned** on every move so an agent (or you) can verify the result.
 
+## Troubleshooting
+
+**`HttpError 403: Google Drive API has not been used in project … or it is disabled`**
+Enable the Drive API on the project that owns your OAuth client: [console.cloud.google.com/apis/library/drive.googleapis.com](https://console.cloud.google.com/apis/library/drive.googleapis.com) → **Enable**, then wait ~1 min and retry. (This is the single most common first-run error.)
+
+**`multiple folders named '…'; pass the folder ID/URL instead`**
+Two or more of your folders share that name, so a name is ambiguous. Run `google-drive-files-mcp search "<name>" --folders` to get the IDs and pass the exact one.
+
+**`no folder named '…' found`**
+Create it first (`google-drive-files-mcp mkdir "<name>"`) or pass a folder ID/URL/`root`.
+
+**`HttpError 403: insufficientFilePermissions` when moving**
+Either the token lacks the full `drive` scope — re-authorize with `google-drive-files-mcp setup --reauth` — or you don't have edit rights on the file/destination (you can't move a file someone else owns unless they've granted you edit access).
+
+**`No valid Google token` from Claude Desktop / cron**
+The first consent needs a browser. Run `google-drive-files-mcp setup` once in a terminal; later headless runs reuse and auto-refresh the cached token.
+
+**A move "removed" a file from a shared folder unexpectedly**
+A true move removes the item from its current parent(s). If you meant to *also* keep it where it was, use `keep_existing_parents=true` (CLI `--keep`).
+
+## Use it from other clients (Cursor, Cline, Continue, …)
+
+Any stdio MCP client works — see [docs/other-clients.md](docs/other-clients.md).
+
+## Authentication — bring your own Google OAuth client
+
+There are **no API keys and no shipped secrets**. The server authenticates to *your* Google account with an OAuth client *you* create, and caches a refresh token locally. The author has zero access to your data.
+
+- **Why your own client?** Google's restricted scopes (here, the full `drive` scope) can't be redistributed in a shared app, and an unverified shared app is capped at 100 users. "Bring your own OAuth client" is the standard pattern for personal-data MCP servers.
+- **What you need:** a free Google Cloud project, the Drive API enabled, an OAuth consent screen, and a Desktop OAuth client. Full walkthrough → [docs/setup-google-oauth.md](docs/setup-google-oauth.md).
+- **Where your token lives:** `~/.config/google-drive-files-mcp/token.json` (mode `0600`). Delete it to revoke locally; revoke fully at [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
+- **No hosted/SaaS option** — everything runs locally; your Drive data never touches a third-party server.
+
+## More guides
+
+- [docs/setup-google-oauth.md](docs/setup-google-oauth.md) — full OAuth walkthrough (full-`drive` scope) + common errors
+- [docs/claude-code.md](docs/claude-code.md) · [docs/claude-desktop.md](docs/claude-desktop.md) · [docs/other-clients.md](docs/other-clients.md)
+- [examples/](examples/) — e.g. file a document into a `YYYY-MM` folder
+
+## Related tools
+
+Part of a small family of focused, local MCP servers for Google Workspace data the hosted connectors don't expose:
+
+- **[gmail-attachments-mcp](https://github.com/zayansalman/gmail-attachments-mcp)** — download Gmail attachment bytes to disk
+- **[google-drive-comments-mcp](https://github.com/zayansalman/google-drive-comments-mcp)** — read comment threads on Docs/Sheets/Slides
+- **google-drive-files-mcp** — move/organize Drive files *(this repo)*
+
+They can share one OAuth login or stay isolated — see each repo's setup.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
