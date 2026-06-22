@@ -272,7 +272,7 @@ def build_parser() -> argparse.ArgumentParser:
     sf = sub.add_parser("sheet-format", help="format a range (number pattern / bold / background)")
     sf.add_argument("spreadsheet")
     sf.add_argument("range")
-    sf.add_argument("--number-format", dest="number_format", default=None, help="e.g. '#,##0.00', '0.00%'")
+    sf.add_argument("--number-format", dest="number_format", default=None, help="e.g. '#,##0.00', '0.00%%'")
     sf.add_argument("--bold", action="store_true", default=None)
     sf.add_argument("--background", default=None, help="#RRGGBB")
     sf.set_defaults(func=cmd_sheet_format)

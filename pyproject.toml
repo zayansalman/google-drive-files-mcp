@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "google-drive-files-mcp"
-version = "0.3.0"
+version = "0.3.1"
 description = "A minimal MCP server and CLI for Google Drive file management (move, upload, organize) and Google Sheets editing."
 readme = "README.md"
 license = "MIT"
