@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.zayansalman/google-drive-files-mcp",
-  "description": "Minimal MCP server for moving and organizing Google Drive files (move, create folders).",
+  "description": "Minimal MCP server for Google Drive file management (move, upload, organize) and Google Sheets editing.",
   "repository": {
     "url": "https://github.com/zayansalman/google-drive-files-mcp",
     "source": "github"
   },
-  "version": "0.1.0",
+  "version": "0.3.0",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "google-drive-files-mcp",
-      "version": "0.1.0",
+      "version": "0.3.0",
       "transport": {
         "type": "stdio"
       },

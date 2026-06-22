@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "google-drive-files-mcp"
-version = "0.1.0"
-description = "A minimal MCP server and CLI for moving and organizing Google Drive files (move, create folders)."
+version = "0.3.0"
+description = "A minimal MCP server and CLI for Google Drive file management (move, upload, organize) and Google Sheets editing."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [{ name = "Zayan Khan" }]
-keywords = ["mcp", "model-context-protocol", "google-drive", "files", "move", "claude", "anthropic"]
+keywords = ["mcp", "model-context-protocol", "google-drive", "google-sheets", "files", "move", "upload", "spreadsheet", "claude", "anthropic"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

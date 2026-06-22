@@ -1,2 +1,2 @@
-"""google-drive-files-mcp: a minimal MCP server for moving/organizing Google Drive files (move, create folders)."""
-__version__ = "0.1.0"
+"""google-drive-files-mcp: a minimal MCP server for Google Drive file management (move, upload, organize) and Google Sheets editing."""
+__version__ = "0.3.0"

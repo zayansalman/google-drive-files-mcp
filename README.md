@@ -2,17 +2,29 @@
 
 <!-- mcp-name: io.github.zayansalman/google-drive-files-mcp -->
 
-A focused [Model Context Protocol](https://modelcontextprotocol.io) server (and standalone CLI) for **moving and organizing** files in Google Drive — move files/folders between folders and create folders. Three tools, no destructive operations.
+A focused [Model Context Protocol](https://modelcontextprotocol.io) server (and standalone CLI) for **Google Drive file management** (move, upload, organize) **and Google Sheets editing** (update cells, append rows, edit tabs, format). Fourteen granular, single-purpose tools — each one an explicit operation, with writes returning before/after so nothing is silently overwritten.
 
-Built because the hosted Google Drive connectors can search, read, and **copy** files, but cannot **move** them — `copy` duplicates a file (new ID) rather than relocating it. This server adds a true move (`files.update` changing parents) plus folder creation, for any MCP client (Claude Code, Claude Desktop, Cursor, Cline, etc.).
+Built because the hosted Google Drive connectors can search, read, and **copy** files, but cannot **move** them (`copy` duplicates a file with a new ID rather than relocating it), cannot reliably **upload a real binary** (their inline-content API needs the bytes embedded as base64, which breaks for large/binary files), and cannot **edit spreadsheet contents**. This server adds a true move, a resumable upload from a local path, folder creation, and a full set of Google Sheets value/structure/format edits — for any MCP client (Claude Code, Claude Desktop, Cursor, Cline, etc.).
 
 ## Tools
 
-- `drive_search(query, only_folders=False, max_results=20)` — find files/folders (and their IDs) to move or to use as destinations.
+### Drive — files & folders
+- `drive_search(query, only_folders=False, max_results=20)` — find files/folders (and their IDs).
 - `drive_create_folder(name, parent=None)` — create a folder (`parent` accepts an ID, URL, `root`, or an unambiguous folder name).
-- `drive_move(file, dest_folder, keep_existing_parents=False)` — move a file/folder into a destination. By default it's a *true move* (removed from its current folder); set `keep_existing_parents=True` to add it to the destination without removing it from where it already lives.
+- `drive_move(file, dest_folder, keep_existing_parents=False)` — *true move* (removed from its current folder); `keep_existing_parents=True` adds without removing.
+- `drive_upload_file(local_path, parent=None, name=None, mime_type=None)` — upload a local file (any type, incl. large binaries) via a **resumable media upload**. Stored as-is (no Google-format conversion).
 
-No rename, copy, trash, or delete — this tool is deliberately limited to non-destructive organizing. (`copy` already exists in the hosted Drive connector.)
+### Google Sheets — read, edit, structure, format
+- `sheets_get_info(spreadsheet)` — list tabs + sizes (call first to learn tab names).
+- `sheets_read(spreadsheet, range_a1, render_option="FORMATTED_VALUE")` — read a range (`FORMULA`/`UNFORMATTED_VALUE` available).
+- `sheets_write(spreadsheet, range_a1, values, value_input_option="USER_ENTERED")` — overwrite a range; returns `before`. `USER_ENTERED` parses numbers and makes `=SUM(..)` a formula; `RAW` writes literally.
+- `sheets_append(spreadsheet, range_a1, values, ...)` — append rows after a table.
+- `sheets_clear(spreadsheet, range_a1)` — clear values (keeps formatting); returns `before`.
+- `sheets_batch_write(spreadsheet, updates, ...)` — write many ranges atomically.
+- `sheets_add_tab` / `sheets_rename_tab` / `sheets_delete_tab` — manage tabs (delete is destructive).
+- `sheets_format(spreadsheet, range_a1, number_format=None, bold=None, background=None)` — number pattern / bold / `#RRGGBB` background.
+
+No rename/copy/trash/delete of *files* (copy already exists in the hosted Drive connector); destructive Sheets ops (`sheets_clear`, `sheets_delete_tab`) are their own explicit tools so you control exactly when they run.
 
 ## Scope warning (read this)
 
@@ -28,7 +40,7 @@ pip install google-drive-files-mcp
 ## One-time setup (~10 min)
 
 1. [Google Cloud Console](https://console.cloud.google.com/) → create/pick a project.
-2. Enable the Drive API: [console.cloud.google.com/apis/library/drive.googleapis.com](https://console.cloud.google.com/apis/library/drive.googleapis.com).
+2. Enable the **Drive API** ([library link](https://console.cloud.google.com/apis/library/drive.googleapis.com)) and, for the Sheets tools, the **Sheets API** ([library link](https://console.cloud.google.com/apis/library/sheets.googleapis.com)). (The full `drive` scope already authorizes the Sheets API — no extra consent, just enable the API.)
 3. OAuth consent screen → **Internal** (Workspace; no verification needed even for the restricted full-drive scope) or **External** + add yourself as a test user (personal Gmail).
 4. Credentials → **OAuth client ID** → **Desktop app** → download JSON.
 5. `google-drive-files-mcp setup --import-credentials ~/Downloads/client_secret_*.json` → consent in the browser.
@@ -65,6 +77,13 @@ google-drive-files-mcp search "Reports" --folders      # find destination folder
 google-drive-files-mcp mkdir "2026 Reports"            # create a folder
 google-drive-files-mcp move <file-url-or-id> "2026 Reports"   # move into it (by folder name)
 google-drive-files-mcp move <file-url-or-id> root      # move back to My Drive root
+google-drive-files-mcp upload ~/Downloads/report.zip --parent "2026 Reports"   # upload a local file
+
+# Google Sheets
+google-drive-files-mcp sheet-info  <sheet-url-or-id>                 # list tabs + sizes
+google-drive-files-mcp sheet-read  <sheet-url-or-id> "Sheet1!A1:D10" # read a range
+google-drive-files-mcp sheet-write <sheet-url-or-id> "Sheet1!B2:B4" '[[100],[200],[300]]'   # set numbers
+google-drive-files-mcp sheet-format <sheet-url-or-id> "Sheet1!B2:B4" --number-format '#,##0.00' --bold
 ```
 
 `drive_move` returns the before/after parents so the move is auditable:

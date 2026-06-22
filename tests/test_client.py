@@ -5,6 +5,7 @@ from google_drive_files_mcp.client import (
     FOLDER_MIME,
     build_search_query,
     extract_file_id,
+    guess_mime_type,
     looks_like_drive_id,
     plan_move,
 )
@@ -81,3 +82,20 @@ class TestPlanMove:
         add, remove = plan_move([], "destX")
         assert add == "destX"
         assert remove == ""
+
+
+class TestGuessMimeType:
+    def test_zip(self):
+        assert guess_mime_type("archive.zip") == "application/zip"
+
+    def test_pdf(self):
+        assert guess_mime_type("report.pdf") == "application/pdf"
+
+    def test_unknown_falls_back_to_octet_stream(self):
+        assert guess_mime_type("data.unknownext") == "application/octet-stream"
+
+    def test_no_extension_falls_back(self):
+        assert guess_mime_type("README") == "application/octet-stream"
+
+    def test_override_wins(self):
+        assert guess_mime_type("archive.zip", override="application/x-custom") == "application/x-custom"

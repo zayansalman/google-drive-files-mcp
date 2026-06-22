@@ -1,8 +1,12 @@
-"""Google Drive file-management operations: search, create folder, move (change parents)."""
+"""Google Drive file-management operations: search, create folder, move (change parents), upload."""
 from __future__ import annotations
 
+import mimetypes
 import re
+from pathlib import Path
 from typing import TypedDict
+
+from googleapiclient.http import MediaFileUpload
 
 from .auth import service
 
@@ -157,4 +161,57 @@ def move(file: str, dest_folder: str, keep_existing_parents: bool = False) -> di
         "moved_to": dest_id,
         "parents_now": updated.get("parents", []),
         "web_view_link": updated.get("webViewLink", ""),
+    }
+
+
+def guess_mime_type(filename: str, override: str | None = None) -> str:
+    """Pure: pick a MIME type for an upload — explicit override wins, else guess from the name, else octet-stream."""
+    if override:
+        return override
+    guessed, _ = mimetypes.guess_type(filename)
+    return guessed or "application/octet-stream"
+
+
+def upload_file(
+    local_path: str,
+    parent: str | None = None,
+    name: str | None = None,
+    mime_type: str | None = None,
+) -> dict:
+    """Upload a local file to Drive via a resumable media upload (streams bytes from disk, handles large binaries).
+
+    The file is stored as-is — no Google-format conversion happens, because we never set a Google target
+    MIME type in the metadata (only the media's MIME type). So a .xlsx stays a .xlsx, a .zip stays a .zip.
+
+    Args:
+        local_path: Path to a local file ('~' expanded).
+        parent: Destination folder — ID/URL/'root'/unambiguous folder name. Default: My Drive root.
+        name: Drive filename. Default: the local basename.
+        mime_type: Override the MIME type. Default: guessed from the name, else application/octet-stream.
+    """
+    p = Path(local_path).expanduser()
+    if not p.exists():
+        raise ValueError(f"local file not found: {local_path}")
+    if not p.is_file():
+        raise ValueError(f"not a regular file: {local_path}")
+
+    svc = service()
+    body: dict = {"name": name or p.name}
+    if parent:
+        body["parents"] = [resolve_folder_id(parent)]
+    media = MediaFileUpload(str(p), mimetype=guess_mime_type(p.name, mime_type), resumable=True)
+    f = svc.files().create(
+        body=body,
+        media_body=media,
+        fields="id,name,mimeType,parents,size,webViewLink",
+        supportsAllDrives=True,
+    ).execute()
+    return {
+        "id": f.get("id", ""),
+        "name": f.get("name", ""),
+        "mime_type": f.get("mimeType", ""),
+        "size_bytes": int(f["size"]) if f.get("size") else None,
+        "parents": f.get("parents", []),
+        "web_view_link": f.get("webViewLink", ""),
+        "local_path": str(p),
     }
