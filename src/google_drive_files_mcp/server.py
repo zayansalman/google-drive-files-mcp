@@ -7,7 +7,7 @@ from collections.abc import Callable
 from googleapiclient.errors import HttpError
 from mcp.server.fastmcp import FastMCP
 
-from . import client, sheets
+from . import client, docs, sheets
 from .auth import DriveAuthError
 
 mcp = FastMCP("google-drive-files")
@@ -237,6 +237,97 @@ def sheets_format(spreadsheet: str, range_a1: str, number_format: str | None = N
     """
     return _run(lambda: sheets.format_cells(spreadsheet, range_a1, number_format=number_format,
                                             bold=bold, background=background))
+
+
+# ============================================================ Docs: surgical editing
+
+@mcp.tool()
+def docs_get_info(document: str) -> str:
+    """Get a Google Doc's title and structure summary (paragraph/table counts, end index).
+
+    Args:
+        document: A Google Docs URL or a bare document ID.
+
+    Returns:
+        JSON {document_id, title, paragraphs, tables, end_index}.
+    """
+    return _run(lambda: docs.get_info(document))
+
+
+@mcp.tool()
+def docs_read(document: str) -> str:
+    """Read a Doc's text WITH per-segment document character indices — read this before editing.
+
+    The indices let you target surgical edits precisely. Table cells include their row/col.
+
+    Args:
+        document: Docs URL or ID.
+
+    Returns:
+        JSON {document_id, title, text, end_index, segments: [{text, start_index, end_index, in_table, row, col}]}.
+    """
+    return _run(lambda: docs.read(document))
+
+
+@mcp.tool()
+def docs_replace_text(document: str, find: str, replace: str, match_case: bool = False) -> str:
+    """Replace every occurrence of a phrase with another — all surrounding content/formatting is left intact.
+
+    The cleanest surgical edit: change one phrase without touching anything else in the document.
+
+    Args:
+        document: Docs URL or ID.
+        find: The exact text to find.
+        replace: The replacement text.
+        match_case: Whether the match is case-sensitive. Default False.
+
+    Returns:
+        JSON {find, replace, occurrences_changed}.
+    """
+    return _run(lambda: docs.replace_text(document, find, replace, match_case=match_case))
+
+
+@mcp.tool()
+def docs_insert_text(document: str, text: str, index: int | None = None,
+                     after_text: str | None = None, before_text: str | None = None) -> str:
+    """Insert text at a precise spot — by document index, or right after/before an anchor phrase.
+
+    Provide exactly one of: index, after_text, or before_text. Anchors use the FIRST occurrence of the
+    phrase. To insert a new paragraph, include a newline in `text` (e.g. leading '\\n'). Everything else
+    stays byte-for-byte the same.
+
+    Args:
+        document: Docs URL or ID.
+        text: The text to insert.
+        index: Document character index to insert at (from docs_read).
+        after_text: Insert immediately after the first occurrence of this anchor phrase.
+        before_text: Insert immediately before the first occurrence of this anchor phrase.
+
+    Returns:
+        JSON {inserted_at_index, chars_inserted}.
+    """
+    return _run(lambda: docs.insert_text(document, text, index=index,
+                                         after_text=after_text, before_text=before_text))
+
+
+@mcp.tool()
+def docs_delete_range(document: str, start_index: int, end_index: int) -> str:
+    """Delete one precise content range [start_index, end_index) (indices from docs_read).
+
+    Returns:
+        JSON {deleted_range}.
+    """
+    return _run(lambda: docs.delete_range(document, start_index, end_index))
+
+
+@mcp.tool()
+def docs_append_text(document: str, text: str) -> str:
+    """Append text at the end of the document body.
+
+    Returns:
+        JSON {inserted_at_index, chars_inserted}.
+    """
+    return _run(lambda: docs.append_text(document, text))
 
 
 def main() -> None:

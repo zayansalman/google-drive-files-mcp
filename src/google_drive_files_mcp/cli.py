@@ -10,19 +10,20 @@ from pathlib import Path
 
 from googleapiclient.errors import HttpError
 
-from . import __version__, client, config, sheets
+from . import __version__, client, config, docs, sheets
 from .auth import DriveAuthError, authenticate, token_status
 
 SETUP_GUIDE = """\
 === google-drive-files-mcp setup ===
 
-This tool MOVES, UPLOADS, ORGANIZES files and EDITS Google Sheets, so it needs the full Drive scope
-(read + write). Before continuing you need an OAuth client JSON from Google Cloud Console.
+This tool MOVES, UPLOADS, ORGANIZES files and EDITS Google Sheets and Docs, so it needs the full Drive
+scope (read + write). Before continuing you need an OAuth client JSON from Google Cloud Console.
 
   1. Open https://console.cloud.google.com/ and sign in.
-  2. Create/reuse a project. Enable the Drive API and the Sheets API:
+  2. Create/reuse a project. Enable the Drive API, Sheets API, and Docs API:
        https://console.cloud.google.com/apis/library/drive.googleapis.com
        https://console.cloud.google.com/apis/library/sheets.googleapis.com
+       https://console.cloud.google.com/apis/library/docs.googleapis.com
   3. OAuth consent screen:
        - Google Workspace: User type = Internal (no verification needed even for the restricted scope).
        - Personal Gmail: User type = External, add your address as a test user.
@@ -175,6 +176,33 @@ def cmd_sheet_format(a):
                                              bold=a.bold, background=a.background))
 
 
+# ----------------------------------------------------------------- docs
+
+def cmd_doc_info(a):
+    return _emit(lambda: docs.get_info(a.document))
+
+
+def cmd_doc_read(a):
+    return _emit(lambda: docs.read(a.document))
+
+
+def cmd_doc_replace(a):
+    return _emit(lambda: docs.replace_text(a.document, a.find, a.replace, match_case=a.match_case))
+
+
+def cmd_doc_insert(a):
+    return _emit(lambda: docs.insert_text(a.document, a.text, index=a.index,
+                                          after_text=a.after, before_text=a.before))
+
+
+def cmd_doc_delete(a):
+    return _emit(lambda: docs.delete_range(a.document, a.start, a.end))
+
+
+def cmd_doc_append(a):
+    return _emit(lambda: docs.append_text(a.document, a.text))
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="google-drive-files-mcp",
@@ -276,6 +304,42 @@ def build_parser() -> argparse.ArgumentParser:
     sf.add_argument("--bold", action="store_true", default=None)
     sf.add_argument("--background", default=None, help="#RRGGBB")
     sf.set_defaults(func=cmd_sheet_format)
+
+    # --- docs ---
+    di = sub.add_parser("doc-info", help="title + structure of a Google Doc")
+    di.add_argument("document")
+    di.set_defaults(func=cmd_doc_info)
+
+    dr = sub.add_parser("doc-read", help="read a Doc's text with character indices")
+    dr.add_argument("document")
+    dr.set_defaults(func=cmd_doc_read)
+
+    drp = sub.add_parser("doc-replace", help="replace a phrase (preserves all other formatting)")
+    drp.add_argument("document")
+    drp.add_argument("find")
+    drp.add_argument("replace")
+    drp.add_argument("--match-case", action="store_true", dest="match_case")
+    drp.set_defaults(func=cmd_doc_replace)
+
+    din = sub.add_parser("doc-insert", help="insert text at an index or relative to an anchor phrase")
+    din.add_argument("document")
+    din.add_argument("text")
+    g = din.add_mutually_exclusive_group(required=True)
+    g.add_argument("--index", type=int)
+    g.add_argument("--after", default=None, help="insert after this anchor phrase")
+    g.add_argument("--before", default=None, help="insert before this anchor phrase")
+    din.set_defaults(func=cmd_doc_insert)
+
+    dd = sub.add_parser("doc-delete", help="delete a content range [start,end)")
+    dd.add_argument("document")
+    dd.add_argument("start", type=int)
+    dd.add_argument("end", type=int)
+    dd.set_defaults(func=cmd_doc_delete)
+
+    da = sub.add_parser("doc-append", help="append text at the end of the document")
+    da.add_argument("document")
+    da.add_argument("text")
+    da.set_defaults(func=cmd_doc_append)
 
     sub.add_parser("serve", help="run the MCP server (stdio)").set_defaults(func=cmd_serve)
     return p

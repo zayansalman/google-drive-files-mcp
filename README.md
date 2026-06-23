@@ -2,9 +2,9 @@
 
 <!-- mcp-name: io.github.zayansalman/google-drive-files-mcp -->
 
-A focused [Model Context Protocol](https://modelcontextprotocol.io) server (and standalone CLI) for **Google Drive file management** (move, upload, organize) **and Google Sheets editing** (update cells, append rows, edit tabs, format). Fourteen granular, single-purpose tools — each one an explicit operation, with writes returning before/after so nothing is silently overwritten.
+A focused [Model Context Protocol](https://modelcontextprotocol.io) server (and standalone CLI) for **Google Drive file management** (move, upload, organize), **Google Sheets editing** (cells, rows, tabs, format), and **surgical Google Docs editing** (replace a phrase, insert at an anchor, delete a range — leaving all other formatting untouched). Twenty granular, single-purpose tools — each an explicit operation, with writes returning before/after or precise indices so nothing changes silently.
 
-Built because the hosted Google Drive connectors can search, read, and **copy** files, but cannot **move** them (`copy` duplicates a file with a new ID rather than relocating it), cannot reliably **upload a real binary** (their inline-content API needs the bytes embedded as base64, which breaks for large/binary files), and cannot **edit spreadsheet contents**. This server adds a true move, a resumable upload from a local path, folder creation, and a full set of Google Sheets value/structure/format edits — for any MCP client (Claude Code, Claude Desktop, Cursor, Cline, etc.).
+Built because the hosted Google Drive connectors can search, read, and **copy** files, but cannot **move** them (`copy` duplicates a file with a new ID rather than relocating it), cannot reliably **upload a real binary** (their inline-content API needs the bytes embedded as base64, which breaks for large/binary files), and cannot **edit spreadsheet or document contents in place**. This server adds a true move, a resumable upload from a local path, folder creation, a full set of Google Sheets edits, and range-scoped Google Docs edits — for any MCP client (Claude Code, Claude Desktop, Cursor, Cline, etc.).
 
 ## Tools
 
@@ -24,7 +24,16 @@ Built because the hosted Google Drive connectors can search, read, and **copy** 
 - `sheets_add_tab` / `sheets_rename_tab` / `sheets_delete_tab` — manage tabs (delete is destructive).
 - `sheets_format(spreadsheet, range_a1, number_format=None, bold=None, background=None)` — number pattern / bold / `#RRGGBB` background.
 
-No rename/copy/trash/delete of *files* (copy already exists in the hosted Drive connector); destructive Sheets ops (`sheets_clear`, `sheets_delete_tab`) are their own explicit tools so you control exactly when they run.
+### Google Docs — surgical in-place editing
+Every Docs edit is range-scoped (`documents.batchUpdate`), so it changes exactly what you target and leaves every other run's native formatting byte-for-byte intact.
+- `docs_get_info(document)` — title + structure (paragraph/table counts, end index).
+- `docs_read(document)` — full text **with per-segment character indices** (table cells include row/col). Read this first to target edits.
+- `docs_replace_text(document, find, replace, match_case=False)` — replace a phrase everywhere; surrounding content/formatting untouched.
+- `docs_insert_text(document, text, index=None, after_text=None, before_text=None)` — insert at an index **or** right after/before an anchor phrase.
+- `docs_delete_range(document, start_index, end_index)` — delete one precise range.
+- `docs_append_text(document, text)` — append at the end.
+
+No rename/copy/trash/delete of *files* (copy already exists in the hosted Drive connector); destructive ops (`sheets_clear`, `sheets_delete_tab`, `docs_delete_range`) are their own explicit tools so you control exactly when they run.
 
 ## Scope warning (read this)
 
@@ -40,7 +49,7 @@ pip install google-drive-files-mcp
 ## One-time setup (~10 min)
 
 1. [Google Cloud Console](https://console.cloud.google.com/) → create/pick a project.
-2. Enable the **Drive API** ([library link](https://console.cloud.google.com/apis/library/drive.googleapis.com)) and, for the Sheets tools, the **Sheets API** ([library link](https://console.cloud.google.com/apis/library/sheets.googleapis.com)). (The full `drive` scope already authorizes the Sheets API — no extra consent, just enable the API.)
+2. Enable the **Drive API** ([link](https://console.cloud.google.com/apis/library/drive.googleapis.com)); for the Sheets tools also enable the **Sheets API** ([link](https://console.cloud.google.com/apis/library/sheets.googleapis.com)); for the Docs tools also enable the **Docs API** ([link](https://console.cloud.google.com/apis/library/docs.googleapis.com)). (The full `drive` scope already authorizes the Sheets and Docs APIs — no extra consent, just enable each API you want.)
 3. OAuth consent screen → **Internal** (Workspace; no verification needed even for the restricted full-drive scope) or **External** + add yourself as a test user (personal Gmail).
 4. Credentials → **OAuth client ID** → **Desktop app** → download JSON.
 5. `google-drive-files-mcp setup --import-credentials ~/Downloads/client_secret_*.json` → consent in the browser.
@@ -84,6 +93,11 @@ google-drive-files-mcp sheet-info  <sheet-url-or-id>                 # list tabs
 google-drive-files-mcp sheet-read  <sheet-url-or-id> "Sheet1!A1:D10" # read a range
 google-drive-files-mcp sheet-write <sheet-url-or-id> "Sheet1!B2:B4" '[[100],[200],[300]]'   # set numbers
 google-drive-files-mcp sheet-format <sheet-url-or-id> "Sheet1!B2:B4" --number-format '#,##0.00' --bold
+
+# Google Docs (surgical, in-place)
+google-drive-files-mcp doc-read    <doc-url-or-id>                       # text + character indices
+google-drive-files-mcp doc-replace <doc-url-or-id> "old phrase" "new phrase"   # preserves all other formatting
+google-drive-files-mcp doc-insert  <doc-url-or-id> $'\n\nNew paragraph.' --after "some anchor text"
 ```
 
 `drive_move` returns the before/after parents so the move is auditable:

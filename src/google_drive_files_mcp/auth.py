@@ -74,6 +74,15 @@ def sheets_service() -> Resource:
     return build("sheets", "v4", credentials=authenticate(allow_browser=False))
 
 
+def docs_service() -> Resource:
+    """Build an authenticated Google Docs API client. Will not open a browser.
+
+    The full `drive` scope already authorizes the Docs API, so no extra consent is needed —
+    but the Docs API must be enabled on the OAuth client's Google Cloud project.
+    """
+    return build("docs", "v1", credentials=authenticate(allow_browser=False))
+
+
 def token_status() -> dict:
     creds = _load_token()
     if creds is None:
